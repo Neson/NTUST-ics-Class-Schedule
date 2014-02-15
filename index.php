@@ -282,11 +282,13 @@ if ($_GET['press']) {
       .btn {
         margin-bottom: 12px;
       }
-      .modal-footer .btn {
+      .modal-header {
+      }
+      .modal-body .nav-tabs {
         margin-bottom: 0px;
       }
-      .modal-header {
-        border: 0;
+      .modal-footer .btn {
+        margin-bottom: 0px;
       }
       .accordion-heading {
         background-color: #f5f5f5;
@@ -452,31 +454,46 @@ if ($_GET['press']) {
     <div id="how0" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h3 id="myModalLabel"></h3>
+        <h3>用法</h3>
       </div>
       <div class="modal-body">
-        <h2>iOS</h2>
-        <hr style="margin-top: 0; margin-bottom: 10px;">
-        <img src="img/how1.jpg">
-        <hr>
-        <h2>Android</h2>
-        <hr style="margin-top: 0; margin-bottom: 10px;">
-        <img src="img/how1-2.jpg">
-        <hr>
-        <h2>Mac</h2>
-        <hr style="margin-top: 0; margin-bottom: 10px;">
-        <p>直接按兩下，用行事曆打開它。建議匯入到新行事曆，以免混亂您原有的行事曆。</p>
-        <img src="img/how0-mac.jpg">
-        <img src="img/how0-mac-2.jpg">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#how0_ios" data-toggle="tab">iOS</a></li>
+          <li><a href="#how0_android" data-toggle="tab">Android</a></li>
+          <li><a href="#how0_mac" data-toggle="tab">Mac</a></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane fade active in" id="how0_ios">
+            <h3>iOS</h3>
+            <hr style="margin-top: 0; margin-bottom: 10px;">
+            <p>直接在 iPhone/iPad 上開啟此網頁。</p>
+            <img src="img/how0-ios.jpg"><br><br>
+            <img src="img/how0-ios-2.jpg"><br><br>
+            <img src="img/how0-ios-3.jpg">
+          </div>
+          <div class="tab-pane fade" id="how0_android">
+            <h3>Android</h3>
+            <hr style="margin-top: 0; margin-bottom: 10px;">
+            <p>前往 <a href="https://www.google.com/calendar/" target="_blank">https://www.google.com/calendar/</a>，匯入日曆檔案到 Google Calender，再與 Android 同步。</p>
+            <img src="img/how0-android.jpg">
+          </div>
+          <div class="tab-pane fade" id="how0_mac">
+            <h3>Mac</h3>
+            <hr style="margin-top: 0; margin-bottom: 10px;">
+            <p>直接按兩下，用行事曆打開它。建議匯入到新行事曆，以免混亂您原有的行事曆。</p>
+            <img src="img/how0-mac.jpg">
+            <img src="img/how0-mac-2.jpg">
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
-        <a href="#" class="btn" data-dismiss="modal">好</a>
+        <a href="#" class="btn" data-dismiss="modal">　好　</a>
       </div>
     </div>
     <div id="how1" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h3 id="myModalLabel"></h3>
+        <h3 id="myModalLabel">　</h3>
       </div>
       <div class="modal-body">
         <img src="img/how1.jpg">
@@ -484,7 +501,7 @@ if ($_GET['press']) {
         <img src="img/how1-2.jpg">
       </div>
       <div class="modal-footer">
-        <a href="#" class="btn" data-dismiss="modal">好</a>
+        <a href="#" class="btn" data-dismiss="modal">　好　</a>
       </div>
     </div>
     <script type="text/javascript">
