@@ -468,6 +468,7 @@ if ($_GET['press']) {
             <hr style="margin-top: 0; margin-bottom: 10px;">
             <p>直接在 iPhone/iPad 上開啟此網頁。</p>
             <img src="img/how0-ios.jpg"><br><br>
+            <p>建議加入到新行事曆，以免混亂您原有的行事曆。</p>
             <img src="img/how0-ios-2.jpg"><br><br>
             <img src="img/how0-ios-3.jpg">
           </div>
