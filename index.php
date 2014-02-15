@@ -227,7 +227,9 @@ if ($_GET['press']) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="把台科大課表快速排進行事曆的工具，支援 iOS、Android、Mac 以及絕大多數行事曆軟體。會自動把上課地點和授課教師附註上去。">
     <meta name="author" content="Neson">
-    <meta property="og:image" content="http://lh3.googleusercontent.com/-gRGcR3IhZ3I/USHkr92eAEI/AAAAAAAATVg/3Xp2W8XTFtY/s0/favicon.png">
+    <meta property="og:image" content="img/ogimg.jpg">
+    <meta property="og:image" content="img/how0-mac-2.jpg">
+    <meta property="og:image" content="img/how0-ios-3.jpg">
 
     <link href="css/bootstrap.css" rel="stylesheet">
     <link href="css/animate.css" rel="stylesheet">
