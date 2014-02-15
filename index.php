@@ -1,56 +1,61 @@
 <!DOCTYPE html>
 <?php
-$semester = 1012; //學期
-$sd = 20130218; //開始上課日期
+/**
+ * NTUST-ics-Class-Schedule: Make .ics format class Schedule
+ *
+ * @package NTUST-ics-Class-Schedule
+ * @author Neson <neson@dex.tw>
+*/
 
-$ThisURL = 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
-if(substr($ThisURL, -1) != "/") {
-  $ThisURL = dirname($ThisURL);
-  $ThisURL = $ThisURL."/";
-}
+/** Config */
+$semester = 1022; //學期
+$sd = 20140217; //開始上課日期
 
-function getclassdata($class, $semester){ //取得多個課程資訊並輸出成陣列, 輸入值為課程代碼, 以空格分隔.
-  $class_array = explode(" ", $class);
-  $i=0;
+/**
+ * Get info of a class
+ *
+ * @param int $course
+ * @param int $semester
+ * @return array $data
+ */
+function getClassData($course, $semester) {
+  if (preg_match('/^[A-Z0-9]{9}$/', $course) && preg_match('/^[0-9]+[12]$/', $semester)) {
+    $http="http://info.ntust.edu.tw/faith/edua/app/qry_linkoutline.aspx?semester=".$semester."&courseno=".$course;
+    $content = file_get_contents($http);
+    // 拆
+    $contenta = explode('<span id="lbl_courseno"><font color="SlateGray">', $content);
+    $contentb = explode('</font></span>', $contenta[1]);
+    if ($contentb[0] == $course) {
+      $data['code']=$contentb[0];
 
-  foreach($class_array as $index => $value){
-    if($value != "" && strlen($value) == 9){
-        $http="http://info.ntust.edu.tw/faith/edua/app/qry_linkoutline.aspx?semester=".$semester."&courseno=".$value;
-        $content = file_get_contents($http);
+      $contenta = explode('<span id="lbl_coursename"><font color="SlateGray">', $content);
+      $contentb = explode('</font></span>', $contenta[1]);
+      $data['title']=$contentb[0];
 
-        $contenta = explode('<span id="lbl_courseno"><font color="SlateGray">', $content);
-        $contentb = explode('</font></span>', $contenta[1]);
-
-      if($contentb[0] == $value){
-        $data[$i]['code']=$contentb[0];
-
-        $contenta = explode('<span id="lbl_coursename"><font color="SlateGray">', $content);
-        $contentb = explode('</font></span>', $contenta[1]);
-        $data[$i]['title']=$contentb[0];
-
-        $contenta = explode('<span id="lbl_timenode"><font color="SlateGray">', $content);
-        $contentb = explode('</font></span>', $contenta[1]);
-        $i2 = 0;
-        $te = explode(' ', $contentb[0]);
-        foreach($te as $index2 => $value2){
-            if($value2 != ""){
-                $value2ea = explode('(', $value2);
-                $value2eb = explode(')', $value2ea[1]);
-                $data[$i]['time'][$i2] = $value2ea[0];
-                $data[$i]['location'][$i2] = $value2eb[0];
-                $i2++;
-            }
-        }
-
-        $contenta = explode('<span id="lbl_teacher"><font color="SlateGray" size="3">', $content);
-        $contentb = explode('</font></span>', $contenta[1]);
-        $data[$i]['lecturer']=$contentb[0];
-
-        $i++;
+      $contenta = explode('<span id="lbl_timenode"><font color="SlateGray">', $content);
+      $contentb = explode('</font></span>', $contenta[1]);
+      $i2 = 0;
+      $te = explode(' ', $contentb[0]);
+      foreach($te as $index => $value){
+          if($value != ""){
+              $valueea = explode('(', $value);
+              $valueeb = explode(')', $valueea[1]);
+              $data['time'][$i2] = $valueea[0];
+              $data['location'][$i2] = $valueeb[0];
+              $i2++;
+          }
       }
+
+      $contenta = explode('<span id="lbl_teacher"><font color="SlateGray" size="3">', $content);
+      $contentb = explode('</font></span>', $contenta[1]);
+      $data['lecturer']=$contentb[0];
+    } else {
+      return false;
     }
+  } else {
+    return false;
   }
-    return $data;
+  return $data;
 }
 
 $wd = array(
@@ -63,6 +68,7 @@ $wd = array(
   "7" => "SU"
 );
 
+// 定義每節課時間、星期對應
 $t[1][0] = '0830';
 $t[2][0] = '0930';
 $t[3][0] = '1030';
@@ -103,66 +109,110 @@ $d = array(
   "R" => "4"
 );
 
-//定義一些變數
-
-
-if($_GET['press']){
-
+/** exe */
+if ($_GET['press']) {
+  /** get data */
   $sdu = strtotime($sd);
-  $swd = date('w', $sdu);
-  //轉換開始日期
-
-  $class = $_GET['content'];
-  $class = ereg_replace("	", " ", $class);
-  $data = getclassdata($class, $semester);
-
-  if($data == "" || $data == null){
+  $swd = date('w', $sdu);  // 轉換開始上課日期
+  $course = $_GET['content'];
+  $course = ereg_replace("  ", " ", $course);
+  if ($course == "" || $course == null) {
   	$error_no_data = 1;
   	$_GET['press'] = "";
-  }else{
+  } else {
+    $courseData = file_get_contents('courseData.json');
+    $courseData = json_decode($courseData, true);
+    $course = explode(' ', $course);
+    foreach ($course as $courseCode) {
+      if (!preg_match('/^[A-Z0-9]{9}$/', $courseCode)) continue;
+      if (!$courseData[$courseCode]) {
+        $courseData[$courseCode] = getClassData($courseCode, $semester);
+      }
+      $data[$courseCode] = $courseData[$courseCode];
+    }
 
-    $file = "ics/".$semester."-".$_GET['id'].".ics";
-    $handle= fopen($file,'w');
-    $txt = "BEGIN:VCALENDAR\nPRODID:ntust.pokaichang.com\nVERSION:2.0\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nX-WR-CALNAME:課程表\nX-WR-TIMEZONE:Asia/Taipei\nX-WR-CALDESC:\nBEGIN:VTIMEZONE\nTZID:Asia/Taipei\nX-LIC-LOCATION:Asia/Taipei\nBEGIN:STANDARD\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:CST\nDTSTART:19700101T000000\nEND:STANDARD\nEND:VTIMEZONE";
-    fwrite($handle,$txt);
+    if (empty($data)) {
+      $has_error = true;
+      $error_type = 'no_data';
+    }
 
-    foreach($data as $index => $classinfo){
-      foreach($classinfo[time] as $cn => $dat){
-        $date = substr($dat, 0, 1);
+    /** arrange and merge events */
+    $merged_data = $data;
+    foreach ($merged_data as $cid => $course_inf) {
+      foreach ($course_inf['time'] as $cn => $dat) {
+        $weekday = substr($dat, 0, 1);
         $time = substr($dat, 1, 2);
-        $daysafter = $d[$date]-$swd;
-        if($daysafter < 0) $daysafter+=7;
-
-        $eyears = date("Y", $sdu);
-        $emonths = date("m", $sdu);
-        $edays = date("d", $sdu);
-        $edate = date("Ymd", mktime(0,0,0,$emonths,$edays+$daysafter,$eyears));
-        $dd = $d[$date];
-
-        $txt = "\n\nBEGIN:VEVENT\n";
-        fwrite($handle,$txt);
-
-        $txt = "DTSTART;TZID=Asia/Taipei:".$edate."T".$t[$time][0]."00\n";
-        fwrite($handle,$txt);
-
-        $txt = "DTEND;TZID=Asia/Taipei:".$edate."T".$t[$time][1]."00\n";
-        fwrite($handle,$txt);
-
-        $txt = "RRULE:FREQ=WEEKLY;COUNT=18;BYDAY=".$wd[$dd]."\n";
-        fwrite($handle,$txt);
-
-        $txt = "SUMMARY:".$classinfo[title]."\nLOCATION:".$classinfo[location][$cn]."\nDESCRIPTION:授課教師: ".$classinfo[lecturer]."\n";
-        fwrite($handle,$txt);
-
-        $txt = "END:VEVENT\n";
-        fwrite($handle,$txt);
+        $merged_data[$cid]['class'][$cn]['weekday'] = $weekday;
+        $merged_data[$cid]['class'][$cn]['start'] = $t[$time][0];
+        $merged_data[$cid]['class'][$cn]['end'] = $t[$time][1];
+        $merged_data[$cid]['class'][$cn]['location'] = $merged_data[$cid]['location'][$cn];
       }
     }
- 
-    $txt = "END:VCALENDAR";
-    fwrite($handle,$txt);
 
-    fclose($handle);
+    foreach ($merged_data as $cid => $course_inf) {
+      foreach ($course_inf['class'] as $cn => $dat) {
+        if ($cn > 0 &&
+          $merged_data[$cid]['class'][$cn]['weekday']
+          == $merged_data[$cid]['class'][$cn-1]['weekday'] &&
+          $merged_data[$cid]['class'][$cn]['location']
+          == $merged_data[$cid]['class'][$cn-1]['location'] &&
+          $merged_data[$cid]['class'][$cn-1]['end']
+          - $merged_data[$cid]['class'][$cn]['start'] < 15) {
+
+          $merged_data[$cid]['class'][$cn]['start'] = $merged_data[$cid]['class'][$cn-1]['start'];
+          unset($merged_data[$cid]['class'][$cn-1]);
+        }
+      }
+    }
+
+    /** print data */
+    $fileKey = md5(serialize($data));
+    $file = "ics/".$semester."-".$fileKey.".ics";
+    if (!file_exists($file)) {
+
+      $handle= fopen($file,'w');
+      $txt = "BEGIN:VCALENDAR\nPRODID:ntust.pokaichang.com\nVERSION:2.0\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nX-WR-CALNAME:課程表\nX-WR-TIMEZONE:Asia/Taipei\nX-WR-CALDESC:\nBEGIN:VTIMEZONE\nTZID:Asia/Taipei\nX-LIC-LOCATION:Asia/Taipei\nBEGIN:STANDARD\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:CST\nDTSTART:19700101T000000\nEND:STANDARD\nEND:VTIMEZONE";
+      fwrite($handle,$txt);
+      foreach ($merged_data as $course_inf) {
+        foreach ($course_inf['class'] as $cn => $dat) {
+          $weekday = $dat['weekday'];
+          $daysafter = $d[$weekday]-$swd;
+          if ($daysafter < 0) $daysafter+=7;
+
+          $eyears = date("Y", $sdu);
+          $emonths = date("m", $sdu);
+          $edays = date("d", $sdu);
+          $edate = date("Ymd", mktime(0,0,0,$emonths,$edays+$daysafter,$eyears));
+          $dd = $d[$weekday];
+
+          $txt = "\n\nBEGIN:VEVENT\n";
+          fwrite($handle,$txt);
+
+          $txt = "DTSTART;TZID=Asia/Taipei:".$edate."T".$dat['start']."00\n";
+          fwrite($handle,$txt);
+
+          $txt = "DTEND;TZID=Asia/Taipei:".$edate."T".$dat['end']."00\n";
+          fwrite($handle,$txt);
+
+          $txt = "RRULE:FREQ=WEEKLY;COUNT=18;BYDAY=".$wd[$dd]."\n";
+          fwrite($handle,$txt);
+
+          $txt = "SUMMARY:".$course_inf[title]."\nLOCATION:".$course_inf[location][$cn]."\nDESCRIPTION:授課教師: ".$course_inf[lecturer]."\n";
+          fwrite($handle,$txt);
+
+          $txt = "END:VEVENT\n";
+          fwrite($handle,$txt);
+        }
+      }
+
+      $txt = "END:VCALENDAR";
+      fwrite($handle,$txt);
+      fclose($handle);
+    }
+
+    /** Save Data */
+    $courseData = json_encode($courseData);
+    file_put_contents('courseData.json' ,$courseData);
   }
 }
 ?>
@@ -171,7 +221,7 @@ if($_GET['press']){
     <meta charset="utf-8">
     <title>NTUST 課表行事曆製作工具</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="把台科大課表做成 iCalender 格式的工具，任何支援匯入 .ics 檔的日曆程式，例如 Google Calender (Android 行事曆)、iOS 日曆 都可以用。會自動把上課地點和授課教師附註上去。">
+    <meta name="description" content="把台科大課表快速排進行事曆的工具，支援 iOS、Android、Mac 以及絕大多數行事曆軟體。會自動把上課地點和授課教師附註上去。">
     <meta name="author" content="Neson">
     <meta property="og:image" content="http://lh3.googleusercontent.com/-gRGcR3IhZ3I/USHkr92eAEI/AAAAAAAATVg/3Xp2W8XTFtY/s0/favicon.png">
 
@@ -207,6 +257,9 @@ if($_GET['press']){
            -moz-box-shadow: 0 1px 2px rgba(0,0,0,.05);
                 box-shadow: 0 1px 2px rgba(0,0,0,.05);
       }
+      .form-signin-heading {
+        font-size: 31.5px;
+      }
       .form-signin .form-signin-heading,
       .form-signin .checkbox {
         margin-bottom: 10px;
@@ -219,7 +272,7 @@ if($_GET['press']){
         padding: 7px 9px;
       }
       .btn {
-      	margin-bottom: 12px; 
+      	margin-bottom: 12px;
       }
       .modal-header {
       	border: 0;
@@ -241,7 +294,11 @@ if($_GET['press']){
              -o-transition: 1s;
                 transition: 1s;
       }
-
+      @media (max-width: 979px) {
+        body {
+          padding-top: 24px !important;
+        }
+      }
     </style>
     <link rel="icon" href="favicon.png" type="image/x-icon">
     <link href="favicon.png" rel="image_src" type="image/jpeg">
@@ -317,7 +374,7 @@ if($_GET['press']){
       </script>
 
       <form action="#get" class="form-signin" method="get" onsubmit="return validate_form(this);">
-        <h2 class="form-signin-heading">NTUST <br>課表行事曆製作工具</h2>
+      <h1 class="form-signin-heading">NTUST <br>課表行事曆製作工具 <small><?php echo $semester; ?></small></h1>
         <div class="accordion-group">
           <div class="accordion-heading">
             <a class="accordion-toggle collapsed" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne">
@@ -326,12 +383,12 @@ if($_GET['press']){
           </div>
           <div id="collapseOne" class="accordion-body collapse" style="height: 0px;">
             <div class="accordion-inner">
-              <p>把台科大課表做成 iCalender 格式的工具，任何支援匯入 .ics 檔的日曆程式，例如 Google Calender (Android 行事曆)、iOS 日曆 都可以用。會自動把上課地點和授課教師附註上去。
-              <a href="https://lh4.googleusercontent.com/-pxK0g-HjeMA/UHWMpWtdCZI/AAAAAAAAKEQ/p00vcE9pPSo/s2000/5.jpg" target="_blank">圖解</a></p>
-              <p>有鑒於把課表一個一個手動 key-in 到行事曆會死掉所以做了這個東西。</p>
+              <p>把台科大課表快速排進行事曆的工具。會自動把上課地點和授課教師附註上去。
+              <a href="#how0" data-toggle="modal">詳細</a>。</p>
+              <p>有鑒於把課表一個一個手動 key-in 到行事曆會死掉所以做了這個東西。支援 iOS、Android、Mac 以及絕大多數可匯入 .ics 格式的行事曆軟體。</p>
               <p>
-                <iframe src="http://ghbtns.com/github-btn.html?user=pokaichang72&repo=NTUST-ics-Class-Schedule&type=watch" allowtransparency="true" frameborder="0" scrolling="0" width="62" height="22"></iframe>
-                <iframe src="http://ghbtns.com/github-btn.html?user=pokaichang72&repo=NTUST-ics-Class-Schedule&type=fork" allowtransparency="true" frameborder="0" scrolling="0" width="55" height="22"></iframe>
+                <iframe src="http://ghbtns.com/github-btn.html?user=Neson&repo=NTUST-ics-Class-Schedule&type=watch" allowtransparency="true" frameborder="0" scrolling="0" width="62" height="22"></iframe>
+                <iframe src="http://ghbtns.com/github-btn.html?user=Neson&repo=NTUST-ics-Class-Schedule&type=fork" allowtransparency="true" frameborder="0" scrolling="0" width="55" height="22"></iframe>
               </p>
 
             </div>
@@ -340,32 +397,37 @@ if($_GET['press']){
 
         <hr>
 
-
-        <div class="control-group id">
-          <label class="control-label" for="id">1. 輸入你的學號：</label>
-          <input name="id" id="id" type="text" class="input-block-level" placeholder="學號" value="<?php echo $_GET['id']; ?>">
-        </div>
-
         <div class="control-group content">
-          <label class="control-label" for="content">2. 進「<a href="https://stu255.ntust.edu.tw/ntust_stu/stu.aspx" target=_blank>學生資訊系統</a>」→「查詢選課狀態」，把「目前選課內容：」那一欄的內容複製貼到下面的框框。<a href="#how1" data-toggle="modal">圖。</a></label>
+          <label class="control-label" for="content">1. 進「<a href="https://stu255.ntust.edu.tw/ntust_stu/stu.aspx" target=_blank>學生資訊系統</a>」→「查詢選課狀態」，把「目前選課內容：」那一欄的內容複製貼到下面的框框。<a href="#how1" data-toggle="modal">圖。</a></label>
           <input name="content" id="content" type="text" class="input-block-level" placeholder="" style="height: 100px;" value="<?php echo $_GET['content']; ?>">
         </div>
 
-        <label for="press">3.</label>
-        <input type="submit" name="press" value="按下去" id="press" class="btn btn-large btn-block" <?php if($_GET['press']) echo "disabled=\"disabled\""; ?> >
-        
+        <label for="press">2.</label>
+        <input type="submit" name="press" value="按下去" id="press" class="btn btn-large btn-block" <?php if($_GET['press'] && !$has_error) echo "disabled=\"disabled\""; ?> >
+
         <div class="load" style="<?php if(!$_GET['press']) echo "height: 0;"; ?> overflow: hidden;">
-          <label>4. 等</label>
+          <label>3. 等</label>
           <div class="progress progress-info <?php if(!$_GET['press']) echo "progress-striped active"; ?>">
             <div class="bar" style="width: 100%;"></div>
           </div>
         </div>
 
-        <?php if(!$_GET['press']) echo "<!--"; ?>
+        <?php
+        if ($has_error) {
+          switch ($error_type) {
+            case 'no_data':
+              echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">沒有課啊！</h4></div>';
+              break;
+            default:
+              echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">有誤。</h4></div>';
+              break;
+          }
+        }
+        if (!$_GET['press'] || $has_error) echo "<!--";
+        ?>
 
-
-        <label id="get" for="get">5.</label>
-        <a id="get" class="btn btn-large btn-block btn-primary" href="<?php echo "ics/".$semester."-".$_GET['id'].".ics"; ?>">取得日曆</a>
+        <label id="get" for="get">4.</label>
+        <a id="get" class="btn btn-large btn-block btn-primary" href="<?php echo "ics/".$semester."-".$fileKey.".ics"; ?>">取得日曆</a>
         <center>
           <br>
           <a class="collapsed" data-toggle="collapse" data-parent="#accordion2" href="#collapsedata">顯示數據</a>
@@ -378,15 +440,15 @@ if($_GET['press']){
             <div class="accordion-inner">
               <br>
               <pre>
-<?php print_r($data); ?>
+<?php print_r($merged_data); ?>
               </pre>
             </div>
           </div>
         </div>
 
-        <?php if(!$_GET['press']) echo "-->"; ?>
+        <?php if(!$_GET['press'] || $has_error) echo "-->"; ?>
         <hr>
-        <div class="fb-like" data-href="<?php echo $ThisURL; ?>" data-send="true" data-show-faces="true" style="max-width: 100%; "></div>
+        <div class="fb-like" data-href="http://calendar.ntust.co/" data-send="true" data-show-faces="true" style="max-width: 100%; "></div>
       </form>
       <script type="text/javascript">
         function loadbar(){
@@ -397,14 +459,20 @@ if($_GET['press']){
         $(".content").keydown(function(){
           $(".content").removeClass("error");
         });
-
-
       </script>
-
     </div>
 
- 
 <!-- Modal -->
+    <div id="how0" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-header">
+      asdasd
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="myModalLabel"></h3>
+      </div>
+      <div class="modal-body">
+        <img src="img/how1.jpg">
+      </div>
+    </div>
     <div id="how1" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
