@@ -115,12 +115,16 @@ if ($_GET['press']) {
   $sdu = strtotime($sd);
   $swd = date('w', $sdu);  // 轉換開始上課日期
   $course = $_GET['content'];
+  $course = ereg_replace(",", " ", $course);
+  $course = ereg_replace(":", " ", $course);
+  $course = ereg_replace("\(", " ", $course);
+  $course = ereg_replace("\)", " ", $course);
   $course = ereg_replace("  ", " ", $course);
   if ($course == "" || $course == null) {
   	$error_no_data = 1;
   	$_GET['press'] = "";
   } else {
-    $courseData = file_get_contents('courseData.json');
+    $courseData = file_get_contents('data/courseData' . $semester . '.json');
     $courseData = json_decode($courseData, true);
     $course = explode(' ', $course);
     foreach ($course as $courseCode) {
@@ -212,7 +216,7 @@ if ($_GET['press']) {
 
     /** Save Data */
     $courseData = json_encode($courseData);
-    file_put_contents('courseData.json' ,$courseData);
+    file_put_contents('data/courseData' . $semester . '.json' ,$courseData);
   }
 }
 ?>
@@ -271,28 +275,42 @@ if ($_GET['press']) {
         margin-bottom: 15px;
         padding: 7px 9px;
       }
+      .control-label {
+        margin-left : 18px;
+        text-indent : -18px ;
+      }
       .btn {
-      	margin-bottom: 12px;
+        margin-bottom: 12px;
+      }
+      .modal-footer .btn {
+        margin-bottom: 0px;
       }
       .modal-header {
-      	border: 0;
+        border: 0;
       }
       .accordion-heading {
-      	background-color: #f5f5f5;
+        background-color: #f5f5f5;
       }
       .accordion-toggle {
-      	color: black;
+        color: black;
       }
       .data-group, .data-heading, .data-collapse, .data-heading > *, .data-collapse > * {
-      	background-color: white;
-      	padding: 0 !important;
-      	border: 0 !important;
+        background-color: white;
+        padding: 0 !important;
+        border: 0 !important;
       }
       .load {
         -webkit-transition: 1s;
            -moz-transition: 1s;
              -o-transition: 1s;
                 transition: 1s;
+      }
+      .then_what, .then_what * {
+        text-align: right;
+        color: #888;
+      }
+      .then_what a {
+        text-decoration: underline;
       }
       @media (max-width: 979px) {
         body {
@@ -330,7 +348,6 @@ if ($_GET['press']) {
       })();
     </script>
   </head>
-
   <body>
     <div id="fb-root"></div>
       <script>(function(d, s, id) {
@@ -340,39 +357,7 @@ if ($_GET['press']) {
         js.src = "//connect.facebook.net/zh_TW/all.js#xfbml=1&appId=132913846761101";
         fjs.parentNode.insertBefore(js, fjs);
       }(document, 'script', 'facebook-jssdk'));</script>
-
     <div class="container">
-      <script type="text/javascript">
-        function validate_required(field, c){
-          with (field){
-            if (value==null||value==""){
-              $(c).addClass("error");
-              $(c).addClass("animated");
-              $(c).addClass("shake");
-              setTimeout('$(".control-group").removeClass("shake")', 1000);
-              return false;
-            }else{
-              return true;
-            }
-          }
-        }
-
-        function validate_form(thisform){
-          with (thisform){
-            if (validate_required(id, ".id") == false){
-              id.focus();
-              return false
-            }
-            if (validate_required(content, ".content") == false){
-              content.focus();
-              return false
-            }
-            $(".load").css("height","auto");
-          }
-          return true;
-        }
-      </script>
-
       <form action="#get" class="form-signin" method="get" onsubmit="return validate_form(this);">
       <h1 class="form-signin-heading">NTUST <br>課表行事曆製作工具 <small><?php echo $semester; ?></small></h1>
         <div class="accordion-group">
@@ -398,12 +383,12 @@ if ($_GET['press']) {
         <hr>
 
         <div class="control-group content">
-          <label class="control-label" for="content">1. 進「<a href="https://stu255.ntust.edu.tw/ntust_stu/stu.aspx" target=_blank>學生資訊系統</a>」→「查詢選課狀態」，把「目前選課內容：」那一欄的內容複製貼到下面的框框。<a href="#how1" data-toggle="modal">圖。</a></label>
+          <label class="control-label" for="content">1. 輸入您的所有課程代碼，以空白分隔。<br>進 <a href="https://stu255.ntust.edu.tw/ntust_stu/stu.aspx" target="_blank">學生資訊系統</a> 或 <a href="https://www.ntust.cc/simulate/" target="_blank">NTUST.CC</a> 把選課資料全部複製貼上來也可以。<a href="#how1" data-toggle="modal">圖。</a></label>
           <input name="content" id="content" type="text" class="input-block-level" placeholder="" style="height: 100px;" value="<?php echo $_GET['content']; ?>">
         </div>
 
         <label for="press">2.</label>
-        <input type="submit" name="press" value="按下去" id="press" class="btn btn-large btn-block" <?php if($_GET['press'] && !$has_error) echo "disabled=\"disabled\""; ?> >
+        <input type="submit" name="press" value="按下去" id="press" class="btn btn-large btn-block" <?php if($_GET['press']) echo "disabled=\"disabled\""; ?> >
 
         <div class="load" style="<?php if(!$_GET['press']) echo "height: 0;"; ?> overflow: hidden;">
           <label>3. 等</label>
@@ -416,10 +401,10 @@ if ($_GET['press']) {
         if ($has_error) {
           switch ($error_type) {
             case 'no_data':
-              echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">沒有課啊！</h4></div>';
+            echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">沒有課啊！</h4><p>找不到課程代碼片段。請確認您貼上的文字包含課程代碼，且以空白分隔。<br><a href="?">重來</a></p></div>';
               break;
             default:
-              echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">有誤。</h4></div>';
+              echo '<div class="alert alert-block alert-error"><button type="button" class="close" data-dismiss="alert">×</button><h4 class="alert-heading">有誤。</h4><br><a href="?">重來</a></div>';
               break;
           }
         }
@@ -428,6 +413,7 @@ if ($_GET['press']) {
 
         <label id="get" for="get">4.</label>
         <a id="get" class="btn btn-large btn-block btn-primary" href="<?php echo "ics/".$semester."-".$fileKey.".ics"; ?>">取得日曆</a>
+        <div class="then_what">(<a href="#how0" data-toggle="modal">然後呢?</a>)</div>
         <center>
           <br>
           <a class="collapsed" data-toggle="collapse" data-parent="#accordion2" href="#collapsedata">顯示數據</a>
@@ -440,7 +426,7 @@ if ($_GET['press']) {
             <div class="accordion-inner">
               <br>
               <pre>
-<?php print_r($merged_data); ?>
+<?php echo ereg_replace("  ", " ", print_r($merged_data, true)); ?>
               </pre>
             </div>
           </div>
@@ -465,12 +451,26 @@ if ($_GET['press']) {
 <!-- Modal -->
     <div id="how0" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
-      asdasd
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
         <h3 id="myModalLabel"></h3>
       </div>
       <div class="modal-body">
+        <h2>iOS</h2>
+        <hr style="margin-top: 0; margin-bottom: 10px;">
         <img src="img/how1.jpg">
+        <hr>
+        <h2>Android</h2>
+        <hr style="margin-top: 0; margin-bottom: 10px;">
+        <img src="img/how1-2.jpg">
+        <hr>
+        <h2>Mac</h2>
+        <hr style="margin-top: 0; margin-bottom: 10px;">
+        <p>直接按兩下，用行事曆打開它。建議匯入到新行事曆，以免混亂您原有的行事曆。</p>
+        <img src="img/how0-mac.jpg">
+        <img src="img/how0-mac-2.jpg">
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn" data-dismiss="modal">好</a>
       </div>
     </div>
     <div id="how1" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -480,8 +480,38 @@ if ($_GET['press']) {
       </div>
       <div class="modal-body">
         <img src="img/how1.jpg">
+        <p><center>-或-</center></p>
+        <img src="img/how1-2.jpg">
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn" data-dismiss="modal">好</a>
       </div>
     </div>
+    <script type="text/javascript">
+      function validate_required(field, c) {
+        with (field) {
+          if (value == null || value == "") {
+            $(c).addClass("error");
+            $(c).addClass("animated");
+            $(c).addClass("shake");
+            setTimeout('$(".control-group").removeClass("shake")', 1000);
+            return false;
+          }else{
+            return true;
+          }
+        }
+      }
 
+      function validate_form(thisform) {
+        with (thisform) {
+          if (validate_required(content, ".content") == false) {
+            content.focus();
+            return false
+          }
+          $(".load").css("height","auto");
+        }
+        return true;
+      }
+    </script>
   </body>
 </html>

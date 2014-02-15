@@ -1,2 +1,5 @@
 .DS_Store
 ics/*.ics
+data/*.json
+tmp/
+config.ru
