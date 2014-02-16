@@ -119,6 +119,7 @@ if ($_GET['press']) {
   $course = ereg_replace(":", " ", $course);
   $course = ereg_replace("\(", " ", $course);
   $course = ereg_replace("\)", " ", $course);
+  $course = ereg_replace("	", " ", $course);
   $course = ereg_replace("  ", " ", $course);
   if ($course == "" || $course == null) {
   	$error_no_data = 1;
@@ -438,7 +439,7 @@ if ($_GET['press']) {
 
         <?php if(!$_GET['press'] || $has_error) echo "-->"; ?>
         <hr>
-        <div class="fb-like" data-href="http://calendar.ntust.co/" data-send="true" data-show-faces="true" style="max-width: 100%; "></div>
+        <div class="fb-like" data-href="http://cal.ntust.co/" data-send="true" data-show-faces="true" style="max-width: 100%; "></div>
       </form>
       <script type="text/javascript">
         function loadbar(){
